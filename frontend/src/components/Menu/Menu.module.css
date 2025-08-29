@@ -1,0 +1,51 @@
+/* src/components/Menu/Menu.module.css */
+.header {
+  background-color: #ffffff;
+  padding: 0 24px;
+  border-bottom: 1px solid #e0e0e0;
+  margin-bottom: 32px;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.logo {
+  font-weight: 700;
+  font-size: 1.5rem;
+  color: #2274a5;
+}
+
+.navList {
+  display: flex;
+  gap: 24px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.navLink, .activeLink {
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 1rem;
+  padding: 8px 0;
+  position: relative;
+  transition: color 0.2s ease-in-out;
+}
+
+.navLink {
+  color: #555;
+}
+.navLink:hover {
+  color: #2274a5;
+}
+
+.activeLink {
+  color: #2274a5;
+  border-bottom: 3px solid #2274a5;
+}

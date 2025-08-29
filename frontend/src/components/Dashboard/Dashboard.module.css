@@ -1,0 +1,45 @@
+/* src/components/Dashboard/Dashboard.module.css */
+.container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 12px;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.statCard {
+  border-radius: 20px;
+  padding: 20px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+.statCard h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #555;
+}
+.statCard p {
+  font-size: 2rem;
+  margin: 8px 0;
+  font-weight: bold;
+}
+.statCard span {
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+/* Variações de cor para os cards */
+.banca { background-color: #e6f2ea; }
+.banca p { color: #227445; }
+.banca span { color: #3c763d; }
+
+.roi { background-color: #d9e8fc; }
+.roi p { color: #335d9f; }
+.roi span { color: #4580df; }
+
+/* Adicione outras classes para os demais componentes aqui */
