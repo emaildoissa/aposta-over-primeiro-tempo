@@ -5,9 +5,13 @@ import (
 	"github.com/emaildoissa/aposta-backend/internal/models"
 )
 
-func GetAllBets() ([]models.Bet, error) {
+func GetAllBets(marketFilter string) ([]models.Bet, error) {
 	var bets []models.Bet
-	err := database.DB.Find(&bets).Error
+	query := database.DB
+	if marketFilter != "" {
+		query = query.Where("market = ?", marketFilter)
+	}
+	err := query.Find(&bets).Error
 	return bets, err
 }
 

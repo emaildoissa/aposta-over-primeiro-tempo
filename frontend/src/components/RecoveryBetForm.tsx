@@ -13,6 +13,9 @@ export default function RecoveryBetForm() {
   const [liveOdd, setLiveOdd] = useState('');
   const [stake, setStake] = useState('');
   const [market, setMarket] = useState('Over 1.5 FT');
+  
+  // 1. ADICIONADO O ESTADO PARA AS OBSERVAÇÕES
+  const [notes, setNotes] = useState('');
 
   const handleSaveHTScore = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,6 +46,7 @@ export default function RecoveryBetForm() {
         stake: parseFloat(stake.replace(',', '.')),
         result: '',
         strategy: 'recovery_ft',
+        notes: notes, // 2. CORRIGIDO PARA 'notes' MINÚSCULO E USANDO O ESTADO
       };
 
       if (isNaN(payload.odd) || isNaN(payload.stake)) {
@@ -66,6 +70,7 @@ export default function RecoveryBetForm() {
     setHtScoreSaved(false);
     setLiveOdd('');
     setStake('');
+    setNotes(''); // 3. ADICIONADO PARA LIMPAR O CAMPO
   };
   
   return (
@@ -103,7 +108,15 @@ export default function RecoveryBetForm() {
           
           <label>Stake (R$):</label>
           <input type="text" value={stake} onChange={e => setStake(e.target.value)} required style={{width: '100%', padding: '8px', marginBottom: '10px'}}/>
-          
+
+          <label>Observações (Opcional):</label>
+          <textarea 
+              value={notes} 
+              onChange={e => setNotes(e.target.value)} 
+              placeholder="Ex: Time da casa pressionando muito, odd de 2.10 aos 60 min."
+              style={{width: '100%', minHeight: '60px', padding: '8px', marginBottom: '10px', border: '1px solid #ccc', borderRadius: '4px'}}
+          />
+
           <button type="submit" style={{width: '100%', padding: '10px', fontWeight: 'bold'}}>Registrar Aposta</button>
           <button type="button" onClick={resetForm} style={{width: '100%', padding: '10px', marginTop: '10px', background: '#eee', border: '1px solid #ccc', color: '#333'}}>Cancelar</button>
         </form>

@@ -2,8 +2,10 @@
 package services
 
 import (
+	"log"
 	"math"
 
+	"github.com/emaildoissa/aposta-backend/internal/models"
 	"github.com/emaildoissa/aposta-backend/internal/repositories"
 )
 
@@ -25,19 +27,24 @@ type BacktestResult struct {
 	ROI                float64 `json:"roi"`
 }
 
-// RunBacktest executa a simulação
 func RunBacktest(input BacktestInput) (*BacktestResult, error) {
 	games, err := repositories.GetAllGames()
 	if err != nil {
 		return nil, err
 	}
+	allBets, err := repositories.GetAllBets("")
+	if err != nil {
+		return nil, err
+	}
+	betsByGameID := make(map[uint][]models.Bet)
+	for _, bet := range allBets {
+		betsByGameID[bet.GameID] = append(betsByGameID[bet.GameID], bet)
+	}
 
 	result := &BacktestResult{}
+	log.Printf("--- INICIANDO BACKTEST INTELIGENTE --- Total de jogos: %d", len(games))
 
 	for _, game := range games {
-		// A verificação genérica foi removida daqui.
-
-		// 1. Verifica se o jogo atende à condição de entrada
 		passesCondition := false
 		switch input.EntryCondition {
 		case "all_games":
@@ -47,42 +54,70 @@ func RunBacktest(input BacktestInput) (*BacktestResult, error) {
 				passesCondition = true
 			}
 		}
-
 		if !passesCondition {
 			continue
 		}
 
-		// 2. Simula a aposta
 		isWin := false
-		shouldSimulate := false // Controla se a aposta pode ser simulada (se os dados necessários existem)
+		canDetermineOutcome := false
 
-		// 3. Verifica o resultado da aposta simulada COM VALIDAÇÃO DE DADOS ESPECÍFICA
 		switch input.MarketToBet {
 		case "Over 2.5 FT":
-			// Para este mercado, precisamos do placar final.
 			if game.HomeScore.Valid && game.AwayScore.Valid {
-				shouldSimulate = true
+				canDetermineOutcome = true
 				totalGoals := int(game.HomeScore.Int32) + int(game.AwayScore.Int32)
 				if totalGoals > 2 {
 					isWin = true
 				}
 			}
+
 		case "Under 1.5 HT":
-			// Para este mercado, só precisamos do placar de intervalo.
 			if game.HomeScoreHT.Valid && game.AwayScoreHT.Valid {
-				shouldSimulate = true
+				canDetermineOutcome = true
 				htGoals := int(game.HomeScoreHT.Int32) + int(game.AwayScoreHT.Int32)
-				if htGoals < 2 { // 0 ou 1 gol = vitória
+				if htGoals < 2 {
 					isWin = true
+				}
+			} else if gameBets, ok := betsByGameID[game.ID]; ok {
+				for _, bet := range gameBets {
+					if bet.Market == "Over 1.5 HT" && bet.Result != "" {
+						canDetermineOutcome = true
+						if bet.Result == "RED" {
+							isWin = true
+						}
+						break
+					}
+				}
+			}
+
+		// --- NOVA LÓGICA ADICIONADA AQUI ---
+		case "Over 1.5 HT":
+			// Prioridade 1: Tenta usar o placar de intervalo
+			if game.HomeScoreHT.Valid && game.AwayScoreHT.Valid {
+				canDetermineOutcome = true
+				htGoals := int(game.HomeScoreHT.Int32) + int(game.AwayScoreHT.Int32)
+				if htGoals > 1 { // Aposta ganha se houver 2 ou mais gols
+					isWin = true
+				}
+			} else if gameBets, ok := betsByGameID[game.ID]; ok {
+				// Prioridade 2: Tenta inferir pelo resultado de uma aposta "Under 1.5 HT"
+				for _, bet := range gameBets {
+					// Lógica inversa da anterior (não temos apostas under 1.5 ht para inferir)
+					// Mas podemos inferir por uma aposta Over 1.5 HT que já exista
+					if bet.Market == "Over 1.5 HT" && bet.Result != "" {
+						canDetermineOutcome = true
+						if bet.Result == "GREEN" {
+							isWin = true
+						}
+						break
+					}
 				}
 			}
 		}
 
-		// 4. Se a simulação foi possível, calcula o PnL
-		if shouldSimulate {
+		if canDetermineOutcome {
 			result.TotalSimulatedBets++
 			result.TotalInvested += input.HypotheticalStake
-
 			if isWin {
 				result.Wins++
 				result.TotalPnL += (input.HypotheticalOdd * input.HypotheticalStake) - input.HypotheticalStake
@@ -93,11 +128,10 @@ func RunBacktest(input BacktestInput) (*BacktestResult, error) {
 		}
 	}
 
-	// 5. Calcula o ROI final
 	if result.TotalInvested > 0 {
 		result.TotalPnL = math.Round(result.TotalPnL*100) / 100
 		result.ROI = (result.TotalPnL / result.TotalInvested) * 100
 	}
-
+	log.Printf("--- FIM DO BACKTEST --- Resultado: %+v", result)
 	return result, nil
 }

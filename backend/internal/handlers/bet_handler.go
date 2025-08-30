@@ -33,7 +33,10 @@ func CreateBet(c *gin.Context) {
 }
 
 func ListBets(c *gin.Context) {
-	bets, err := services.ListBets()
+	// Lê o parâmetro "market" da URL. Ex: /api/bets?market=Over%201.5%20HT
+	marketFilter := c.Query("market")
+
+	bets, err := services.ListBets(marketFilter)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

@@ -65,8 +65,9 @@ export default function Backtester() {
           
           <label>Mercado a Apostar:</label>
           <select value={market} onChange={e => setMarket(e.target.value)}>
-            <option value="Over 2.5 FT">Over 2.5 Gols (Final)</option>
+            <option value="Over 1.5 HT">Over 1.5 Gols (Intervalo)</option>
             <option value="Under 1.5 HT">Under 1.5 Gols (Intervalo)</option>
+            <option value="Over 2.5 FT">Over 2.5 Gols (Final)</option>
           </select>
 
           <label>Odd Média Hipotética:</label>

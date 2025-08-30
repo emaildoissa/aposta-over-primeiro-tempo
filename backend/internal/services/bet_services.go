@@ -14,8 +14,8 @@ func CreateBet(bet *models.Bet) error {
 	return repositories.CreateBet(bet)
 }
 
-func ListBets() ([]models.Bet, error) {
-	return repositories.GetAllBets()
+func ListBets(marketFilter string) ([]models.Bet, error) {
+	return repositories.GetAllBets(marketFilter)
 }
 
 // UpdateBetResult contém a lógica de negócio para calcular o PnL.

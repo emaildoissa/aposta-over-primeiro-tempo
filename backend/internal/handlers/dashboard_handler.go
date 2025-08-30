@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/emaildoissa/aposta-backend/internal/services"
@@ -10,9 +9,11 @@ import (
 
 // GetDashboardStats manipula a requisição para obter as estatísticas do dashboard.
 func GetDashboardStats(c *gin.Context) {
-	stats, err := services.GetDashboardStats()
+	// Lê o mesmo filtro de mercado
+	marketFilter := c.Query("market")
+
+	stats, err := services.GetDashboardStats(marketFilter)
 	if err != nil {
-		log.Printf("!!! ERRO DETALHADO AO CALCULAR ESTATÍSTICAS: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao calcular estatísticas"})
 		return
 	}

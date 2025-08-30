@@ -10,4 +10,5 @@ type Bet struct {
 	Result   string  `json:"result"`
 	Pnl      float64 `json:"pnl"`
 	Strategy string  `json:"strategy"`
+	Notes    string  `json:"notes,omitempty"`
 }

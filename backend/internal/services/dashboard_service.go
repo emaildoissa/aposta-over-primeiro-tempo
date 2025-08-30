@@ -2,7 +2,7 @@
 package services
 
 import (
-	"errors" // IMPORTE O PACOTE DE ERROS
+	"errors"
 	"math"
 	"sort"
 	"strconv"
@@ -11,7 +11,6 @@ import (
 	"github.com/emaildoissa/aposta-backend/internal/repositories"
 )
 
-// ... (struct DashboardStats não muda) ...
 type DashboardStats struct {
 	BancaInicial    float64 `json:"banca_inicial"`
 	BancaTotal      float64 `json:"banca_total"`
@@ -30,21 +29,20 @@ type EvolutionDataPoint struct {
 
 const defaultInitialBankroll = "100.00"
 
-func GetDashboardStats() (*DashboardStats, error) {
+// CORREÇÃO 1: A função agora aceita o parâmetro 'marketFilter' que vem do handler.
+func GetDashboardStats(marketFilter string) (*DashboardStats, error) {
 	setting, err := repositories.FindOrCreateSetting("initial_bankroll", defaultInitialBankroll)
 	if err != nil {
 		return nil, err
 	}
 
-	// --- CORREÇÃO DO BUG AQUI ---
-	// Agora estamos tratando o erro da conversão de string para float64
 	bancaInicial, err := strconv.ParseFloat(setting.Value, 64)
 	if err != nil {
-		// Se o valor no banco estiver mal formatado (ex: "abc"), retornamos um erro claro
 		return nil, errors.New("valor da banca inicial no banco de dados é inválido")
 	}
 
-	bets, err := repositories.GetAllBets()
+	// CORREÇÃO 2: A variável 'marketFilter' agora existe e é passada corretamente para o repositório.
+	bets, err := repositories.GetAllBets(marketFilter)
 	if err != nil {
 		return nil, err
 	}
@@ -72,13 +70,17 @@ func GetDashboardStats() (*DashboardStats, error) {
 	if stats.TotalApostado > 0 {
 		stats.ROI = (stats.LucroTotal / stats.TotalApostado) * 100
 	}
-	stats.TaxaDeAcerto = (float64(stats.ApostasVencidas) / float64(stats.TotalApostas)) * 100
+	// Adicionada uma verificação para evitar divisão por zero.
+	if stats.TotalApostas > 0 {
+		stats.TaxaDeAcerto = (float64(stats.ApostasVencidas) / float64(stats.TotalApostas)) * 100
+	}
 
 	return stats, nil
 }
 
 func GetDashboardEvolution() ([]EvolutionDataPoint, error) {
-	bets, err := repositories.GetAllBets()
+	// CORREÇÃO 3: O gráfico de evolução não deve ser filtrado, então passamos uma string vazia.
+	bets, err := repositories.GetAllBets("")
 	if err != nil {
 		return nil, err
 	}
@@ -127,9 +129,6 @@ func GetDashboardEvolution() ([]EvolutionDataPoint, error) {
 		evolutionData = append(evolutionData, evolutionPoint)
 	}
 
-	// --- A CORREÇÃO ESTÁ AQUI ---
-	// Se nenhuma aposta com resultado foi encontrada, evolutionData será nulo.
-	// Nós garantimos que sempre retornaremos uma slice vazia em vez de nulo.
 	if evolutionData == nil {
 		return make([]EvolutionDataPoint, 0), nil
 	}
