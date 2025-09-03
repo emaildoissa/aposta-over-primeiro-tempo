@@ -9,13 +9,12 @@ import (
 )
 
 func CreateBet(bet *models.Bet) error {
-	// Aqui você poderia adicionar validações de negócio,
-	// por exemplo, verificar se o GameID existe antes de criar a aposta.
 	return repositories.CreateBet(bet)
 }
 
-func ListBets(marketFilter string) ([]models.Bet, error) {
-	return repositories.GetAllBets(marketFilter)
+// ListBets agora passa o userID e o filtro para o repositório.
+func ListBets(userID uint, marketFilter string) ([]models.Bet, error) {
+	return repositories.GetAllBets(userID, marketFilter)
 }
 
 // UpdateBetResult contém a lógica de negócio para calcular o PnL.

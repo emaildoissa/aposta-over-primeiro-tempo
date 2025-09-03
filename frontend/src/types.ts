@@ -66,8 +66,16 @@ export type BacktestResult = {
   roi: number;
 };
 
-// --- TIPO ADICIONADO AQUI ---
 export type ApiFilters = {
   market?: string;
   strategy?: string;
+};
+
+export type AuthInput = {
+  email?: string;
+  password?: string;
+};
+
+export type AuthResponse = {
+  token: string;
 };

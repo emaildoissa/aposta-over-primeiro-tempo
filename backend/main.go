@@ -28,7 +28,7 @@ func main() {
 	if *migrate {
 		log.Println("Iniciando migração do banco de dados...")
 		// Agora o Go sabe o que são models.Game e models.Bet
-		err = database.DB.AutoMigrate(&models.Game{}, &models.Bet{}, &models.Setting{})
+		err = database.DB.AutoMigrate(&models.Game{}, &models.Bet{}, &models.Setting{}, &models.User{})
 		if err != nil {
 			log.Fatal("Erro ao executar a migração:", err)
 		}

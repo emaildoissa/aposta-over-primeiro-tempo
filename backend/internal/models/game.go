@@ -8,6 +8,8 @@ import (
 
 type Game struct {
 	ID          uint          `gorm:"primaryKey" json:"id"`
+	UserID      uint          `json:"user_id"`
+	User        User          `gorm:"foreignKey:UserID" json:"-"`
 	HomeTeam    string        `json:"home_team"`
 	AwayTeam    string        `json:"away_team"`
 	StartTime   time.Time     `json:"start_time"`

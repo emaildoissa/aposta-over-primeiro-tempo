@@ -20,23 +20,40 @@ type DutchingInput struct {
 }
 
 func CreateBet(c *gin.Context) {
+	userID, err := getUserIDFromContext(c) // Reutiliza a função helper
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
 	var bet models.Bet
 	if err := c.ShouldBindJSON(&bet); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	bet.UserID = userID // Associa a aposta ao usuário logado
+
+	// Idealmente, o serviço deveria verificar se o game_id pertence ao userID.
 	if err := services.CreateBet(&bet); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
 	c.JSON(http.StatusOK, bet)
 }
 
 func ListBets(c *gin.Context) {
-	// Lê o parâmetro "market" da URL. Ex: /api/bets?market=Over%201.5%20HT
+	userID, err := getUserIDFromContext(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
 	marketFilter := c.Query("market")
 
-	bets, err := services.ListBets(marketFilter)
+	// Passa o userID para o serviço para filtrar as apostas
+	bets, err := services.ListBets(userID, marketFilter)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

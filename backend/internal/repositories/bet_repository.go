@@ -5,14 +5,22 @@ import (
 	"github.com/emaildoissa/aposta-backend/internal/models"
 )
 
-func GetAllBets(marketFilter string) ([]models.Bet, error) {
+// GetAllBets agora filtra as apostas pelo ID do usuário.
+func GetAllBets(userID uint, marketFilter string) ([]models.Bet, error) {
 	var bets []models.Bet
-	query := database.DB
+	query := database.DB.Order("id asc").Where("user_id = ?", userID)
+
 	if marketFilter != "" {
 		query = query.Where("market = ?", marketFilter)
 	}
 	err := query.Find(&bets).Error
 	return bets, err
+}
+
+func GetBetByID(id uint) (*models.Bet, error) {
+	var bet models.Bet
+	err := database.DB.First(&bet, id).Error
+	return &bet, err
 }
 
 func CreateBet(bet *models.Bet) error {
@@ -21,10 +29,4 @@ func CreateBet(bet *models.Bet) error {
 
 func UpdateBetResult(id uint, result string, pnl float64) error {
 	return database.DB.Model(&models.Bet{}).Where("id = ?", id).Updates(models.Bet{Result: result, Pnl: pnl}).Error
-}
-
-func GetBetByID(id uint) (*models.Bet, error) {
-	var bet models.Bet
-	err := database.DB.First(&bet, id).Error
-	return &bet, err
 }

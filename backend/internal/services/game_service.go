@@ -6,25 +6,23 @@ import (
 )
 
 func CreateGame(game *models.Game) error {
-	// Validações de negócio podem ser adicionadas aqui
 	return repositories.CreateGame(game)
 }
 
-func ListGames(page int, limit int) ([]models.Game, int64, error) {
+func ListGames(userID uint, page int, limit int) ([]models.Game, int64, error) {
 	if page <= 0 {
 		page = 1
 	}
 	if limit <= 0 {
-		limit = 10 // Um limite padrão
+		limit = 10
 	}
-	return repositories.GetAllGames(page, limit)
+	return repositories.GetAllGames(userID, page, limit)
 }
 
-func UpdateGameScore(id uint, homeScore int, awayScore int) error {
-	// Aqui você pode adicionar validações, ex: score não pode ser negativo
-	return repositories.UpdateGameScore(id, homeScore, awayScore)
+func UpdateGameScore(gameID uint, userID uint, homeScore int, awayScore int) error {
+	return repositories.UpdateGameScore(gameID, userID, homeScore, awayScore)
 }
 
-func UpdateGameHTScore(id uint, homeScoreHT int, awayScoreHT int) error {
-	return repositories.UpdateGameHTScore(id, homeScoreHT, awayScoreHT)
+func UpdateGameHTScore(gameID uint, userID uint, homeScoreHT int, awayScoreHT int) error {
+	return repositories.UpdateGameHTScore(gameID, userID, homeScoreHT, awayScoreHT)
 }

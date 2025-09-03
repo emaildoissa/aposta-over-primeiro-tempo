@@ -28,7 +28,7 @@ type EvolutionDataPoint struct {
 
 const defaultInitialBankroll = "100.00"
 
-func GetDashboardStats(marketFilter string) (*DashboardStats, error) {
+func GetDashboardStats(userID uint, marketFilter string) (*DashboardStats, error) {
 	setting, err := repositories.FindOrCreateSetting("initial_bankroll", defaultInitialBankroll)
 	if err != nil {
 		return nil, err
@@ -37,7 +37,7 @@ func GetDashboardStats(marketFilter string) (*DashboardStats, error) {
 	if err != nil {
 		return nil, errors.New("valor da banca inicial no banco de dados é inválido")
 	}
-	bets, err := repositories.GetAllBets(marketFilter)
+	bets, err := repositories.GetAllBets(userID, marketFilter)
 	if err != nil {
 		return nil, err
 	}
@@ -64,13 +64,13 @@ func GetDashboardStats(marketFilter string) (*DashboardStats, error) {
 	return stats, nil
 }
 
-func GetDashboardEvolution() ([]EvolutionDataPoint, error) {
-	bets, err := repositories.GetAllBets("")
+func GetDashboardEvolution(userID uint) ([]EvolutionDataPoint, error) {
+	bets, err := repositories.GetAllBets(userID, "")
 	if err != nil {
 		return nil, err
 	}
 	// --- CORREÇÃO AQUI: Chamando GetAllGames com parâmetros e tratando 3 valores de retorno ---
-	games, _, err := repositories.GetAllGames(1, 10000)
+	games, _, err := repositories.GetAllGames(userID, 1, 10000)
 	if err != nil {
 		return nil, err
 	}

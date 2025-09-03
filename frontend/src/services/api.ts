@@ -1,12 +1,21 @@
-// src/services/api.ts
-
-// A lista de importação agora inclui 'ApiFilters'
-import type { Game, Bet, DashboardStats, EvolutionDataPoint, GamesResponse, BacktestInput, BacktestResult, ApiFilters } from '../types';
+import type { Game, Bet, DashboardStats, EvolutionDataPoint, GamesResponse, BacktestInput, BacktestResult, ApiFilters, AuthInput, AuthResponse } from '../types';
 
 const API_BASE_URL = 'http://localhost:8080/api';
 
 async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
+   const token = localStorage.getItem('authToken');
+   const headers = new Headers(options?.headers);
+    if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+  if (!headers.has('Content-Type') && options?.body) {
+      headers.set('Content-Type', 'application/json');
+  }
+   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    ...options,
+    headers,
+  });
+  
   if (!response.ok) {
     const errorText = await response.text();
     throw new Error(errorText || 'Erro na comunicação com a API');
@@ -15,7 +24,23 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
   return text ? JSON.parse(text) : {} as T;
 }
 
-// A definição local de 'ApiFilters' foi REMOVIDA daqui
+export const loginUser = (credentials: AuthInput): Promise<AuthResponse> => {
+    return request<AuthResponse>('/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(credentials),
+    });
+};
+
+// Adicione esta função
+export const registerUser = (credentials: AuthInput): Promise<any> => {
+    return request('/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(credentials),
+    });
+};
+
 
 // getGames agora envia a página e o limite
 export const getGames = (page: number, limit: number): Promise<GamesResponse> => {

@@ -24,16 +24,16 @@ type BacktestResult struct {
 	ROI                float64 `json:"roi"`
 }
 
-func RunBacktest(input BacktestInput) (*BacktestResult, error) {
+func RunBacktest(userID uint, input BacktestInput) (*BacktestResult, error) {
 	// --- CORREÇÃO AQUI: Chamando GetAllGames com parâmetros e tratando 3 valores de retorno ---
 	// Usamos um limite alto para buscar todos os jogos para o backtest.
 	// O segundo valor de retorno (total) é ignorado aqui com `_`.
-	games, _, err := repositories.GetAllGames(1, 10000)
+	games, _, err := repositories.GetAllGames(userID, 1, 10000)
 	if err != nil {
 		return nil, err
 	}
 
-	allBets, err := repositories.GetAllBets("")
+	allBets, err := repositories.GetAllBets(userID, "")
 	if err != nil {
 		return nil, err
 	}

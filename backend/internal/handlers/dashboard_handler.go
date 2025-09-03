@@ -9,10 +9,14 @@ import (
 
 // GetDashboardStats manipula a requisição para obter as estatísticas do dashboard.
 func GetDashboardStats(c *gin.Context) {
-	// Lê o mesmo filtro de mercado
+	userID, err := getUserIDFromContext(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Ação não autorizada"})
+		return
+	}
 	marketFilter := c.Query("market")
 
-	stats, err := services.GetDashboardStats(marketFilter)
+	stats, err := services.GetDashboardStats(userID, marketFilter)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao calcular estatísticas"})
 		return
@@ -21,7 +25,12 @@ func GetDashboardStats(c *gin.Context) {
 }
 
 func GetDashboardEvolution(c *gin.Context) {
-	evolutionData, err := services.GetDashboardEvolution()
+	userID, err := getUserIDFromContext(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Ação não autorizada"})
+		return
+	}
+	evolutionData, err := services.GetDashboardEvolution(userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao calcular dados de evolução"})
 		return
