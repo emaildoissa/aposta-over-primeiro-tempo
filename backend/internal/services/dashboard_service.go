@@ -1,4 +1,3 @@
-// internal/services/dashboard_service.go
 package services
 
 import (
@@ -29,34 +28,25 @@ type EvolutionDataPoint struct {
 
 const defaultInitialBankroll = "100.00"
 
-// CORREÇÃO 1: A função agora aceita o parâmetro 'marketFilter' que vem do handler.
 func GetDashboardStats(marketFilter string) (*DashboardStats, error) {
 	setting, err := repositories.FindOrCreateSetting("initial_bankroll", defaultInitialBankroll)
 	if err != nil {
 		return nil, err
 	}
-
 	bancaInicial, err := strconv.ParseFloat(setting.Value, 64)
 	if err != nil {
 		return nil, errors.New("valor da banca inicial no banco de dados é inválido")
 	}
-
-	// CORREÇÃO 2: A variável 'marketFilter' agora existe e é passada corretamente para o repositório.
 	bets, err := repositories.GetAllBets(marketFilter)
 	if err != nil {
 		return nil, err
 	}
-
-	stats := &DashboardStats{
-		BancaInicial: bancaInicial,
-	}
-
+	stats := &DashboardStats{BancaInicial: bancaInicial}
 	stats.TotalApostas = len(bets)
 	if stats.TotalApostas == 0 {
 		stats.BancaTotal = stats.BancaInicial
 		return stats, nil
 	}
-
 	for _, bet := range bets {
 		stats.LucroTotal += bet.Pnl
 		stats.TotalApostado += bet.Stake
@@ -64,27 +54,23 @@ func GetDashboardStats(marketFilter string) (*DashboardStats, error) {
 			stats.ApostasVencidas++
 		}
 	}
-
 	stats.BancaTotal = stats.BancaInicial + stats.LucroTotal
-
 	if stats.TotalApostado > 0 {
 		stats.ROI = (stats.LucroTotal / stats.TotalApostado) * 100
 	}
-	// Adicionada uma verificação para evitar divisão por zero.
 	if stats.TotalApostas > 0 {
 		stats.TaxaDeAcerto = (float64(stats.ApostasVencidas) / float64(stats.TotalApostas)) * 100
 	}
-
 	return stats, nil
 }
 
 func GetDashboardEvolution() ([]EvolutionDataPoint, error) {
-	// CORREÇÃO 3: O gráfico de evolução não deve ser filtrado, então passamos uma string vazia.
 	bets, err := repositories.GetAllBets("")
 	if err != nil {
 		return nil, err
 	}
-	games, err := repositories.GetAllGames()
+	// --- CORREÇÃO AQUI: Chamando GetAllGames com parâmetros e tratando 3 valores de retorno ---
+	games, _, err := repositories.GetAllGames(1, 10000)
 	if err != nil {
 		return nil, err
 	}
@@ -113,11 +99,9 @@ func GetDashboardEvolution() ([]EvolutionDataPoint, error) {
 	for date, pnl := range dailyPnls {
 		sortedDailyPoints = append(sortedDailyPoints, dailyPoint{Date: date, PnL: pnl})
 	}
-
 	sort.Slice(sortedDailyPoints, func(i, j int) bool {
 		return sortedDailyPoints[i].Date < sortedDailyPoints[j].Date
 	})
-
 	var evolutionData []EvolutionDataPoint
 	var cumulativeProfit float64 = 0.0
 	for _, point := range sortedDailyPoints {
@@ -128,10 +112,8 @@ func GetDashboardEvolution() ([]EvolutionDataPoint, error) {
 		}
 		evolutionData = append(evolutionData, evolutionPoint)
 	}
-
 	if evolutionData == nil {
 		return make([]EvolutionDataPoint, 0), nil
 	}
-
 	return evolutionData, nil
 }

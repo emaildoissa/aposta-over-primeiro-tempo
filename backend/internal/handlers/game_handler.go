@@ -1,6 +1,9 @@
 package handlers
 
 import (
+	"bytes"
+	"encoding/json"
+	"io/ioutil"
 	"net/http"
 	"strconv"
 	"time"
@@ -28,49 +31,93 @@ type HTScoreInput struct {
 }
 
 func CreateGame(c *gin.Context) {
-	var input CreateGameInput
-	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	// 1. Lê o corpo da requisição sem processá-lo imediatamente.
+	body, err := ioutil.ReadAll(c.Request.Body)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Não foi possível ler o corpo da requisição"})
 		return
 	}
+	// Restaura o corpo para que possa ser lido novamente se necessário
+	c.Request.Body = ioutil.NopCloser(bytes.NewBuffer(body))
 
-	layouts := []string{"2006-01-02T15:04:05", "2006-01-02T15:04"}
-	var startTime time.Time
-	var err error
+	var inputs []CreateGameInput
 
-	for _, layout := range layouts {
-		startTime, err = time.Parse(layout, input.StartTime)
-		if err == nil {
-			break
+	// 2. Verifica se o JSON começa com '{' (objeto) ou '[' (lista).
+	trimmedBody := bytes.TrimSpace(body)
+	if len(trimmedBody) > 0 && trimmedBody[0] == '{' {
+		// Se for um objeto único, o processa como tal...
+		var singleInput CreateGameInput
+		if err := json.Unmarshal(body, &singleInput); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Objeto JSON inválido: " + err.Error()})
+			return
+		}
+		// ...e o adiciona a nossa lista para manter o resto da lógica consistente.
+		inputs = append(inputs, singleInput)
+	} else {
+		// Se for uma lista, processa a lista inteira.
+		if err := json.Unmarshal(body, &inputs); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Array JSON inválido: " + err.Error()})
+			return
 		}
 	}
 
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "formato de data inválido para start_time. use YYYY-MM-DDTHH:MM:SS ou YYYY-MM-DDTHH:MM"})
+	// 3. A partir daqui, a lógica continua a mesma, processando uma lista de jogos.
+	var createdGames []models.Game
+	for _, input := range inputs {
+		layouts := []string{"2006-01-02T15:04:05Z", "2006-01-02T15:04:05", "2006-01-02T15:04"}
+		var startTime time.Time
+		var parseErr error
+
+		for _, layout := range layouts {
+			startTime, parseErr = time.Parse(layout, input.StartTime)
+			if parseErr == nil {
+				break
+			}
+		}
+		if parseErr != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "formato de data inválido para start_time: " + input.StartTime})
+			return
+		}
+
+		game := &models.Game{
+			HomeTeam:  input.HomeTeam,
+			AwayTeam:  input.AwayTeam,
+			StartTime: startTime,
+		}
+
+		if err := services.CreateGame(game); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "não foi possível criar o jogo: " + game.HomeTeam})
+			return
+		}
+		createdGames = append(createdGames, *game)
+	}
+
+	// Se a entrada original era um objeto único, retorna apenas esse objeto.
+	if len(trimmedBody) > 0 && trimmedBody[0] == '{' && len(createdGames) == 1 {
+		c.JSON(http.StatusCreated, createdGames[0])
 		return
 	}
 
-	game := &models.Game{
-		HomeTeam:  input.HomeTeam,
-		AwayTeam:  input.AwayTeam,
-		StartTime: startTime,
-	}
-
-	if err := services.CreateGame(game); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "não foi possível criar o jogo"})
-		return
-	}
-
-	c.JSON(http.StatusCreated, game)
+	// Caso contrário, retorna a lista de jogos criados.
+	c.JSON(http.StatusCreated, createdGames)
 }
 
 func ListGames(c *gin.Context) {
-	games, err := services.ListGames()
+	// Pega os parâmetros 'page' e 'limit' da URL, com valores padrão
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+
+	games, total, err := services.ListGames(page, limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, games)
+
+	// Retorna uma resposta JSON estruturada com os dados e o total
+	c.JSON(http.StatusOK, gin.H{
+		"games": games,
+		"total": total,
+	})
 }
 
 func UpdateGameScore(c *gin.Context) {

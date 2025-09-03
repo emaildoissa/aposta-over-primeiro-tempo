@@ -10,8 +10,14 @@ func CreateGame(game *models.Game) error {
 	return repositories.CreateGame(game)
 }
 
-func ListGames() ([]models.Game, error) {
-	return repositories.GetAllGames()
+func ListGames(page int, limit int) ([]models.Game, int64, error) {
+	if page <= 0 {
+		page = 1
+	}
+	if limit <= 0 {
+		limit = 10 // Um limite padrão
+	}
+	return repositories.GetAllGames(page, limit)
 }
 
 func UpdateGameScore(id uint, homeScore int, awayScore int) error {

@@ -1,4 +1,3 @@
-// internal/services/backtest_service.go
 package services
 
 import (
@@ -9,15 +8,13 @@ import (
 	"github.com/emaildoissa/aposta-backend/internal/repositories"
 )
 
-// BacktestInput define as regras da estratégia a ser testada
 type BacktestInput struct {
-	EntryCondition    string  `json:"entry_condition"` // Ex: "ht_score_0_0", "all_games"
-	MarketToBet       string  `json:"market_to_bet"`   // Ex: "Over 2.5 FT", "Under 1.5 HT"
+	EntryCondition    string  `json:"entry_condition"`
+	MarketToBet       string  `json:"market_to_bet"`
 	HypotheticalOdd   float64 `json:"hypothetical_odd"`
 	HypotheticalStake float64 `json:"hypothetical_stake"`
 }
 
-// BacktestResult resume o resultado da simulação
 type BacktestResult struct {
 	TotalSimulatedBets int     `json:"total_simulated_bets"`
 	Wins               int     `json:"wins"`
@@ -28,10 +25,14 @@ type BacktestResult struct {
 }
 
 func RunBacktest(input BacktestInput) (*BacktestResult, error) {
-	games, err := repositories.GetAllGames()
+	// --- CORREÇÃO AQUI: Chamando GetAllGames com parâmetros e tratando 3 valores de retorno ---
+	// Usamos um limite alto para buscar todos os jogos para o backtest.
+	// O segundo valor de retorno (total) é ignorado aqui com `_`.
+	games, _, err := repositories.GetAllGames(1, 10000)
 	if err != nil {
 		return nil, err
 	}
+
 	allBets, err := repositories.GetAllBets("")
 	if err != nil {
 		return nil, err
@@ -42,9 +43,11 @@ func RunBacktest(input BacktestInput) (*BacktestResult, error) {
 	}
 
 	result := &BacktestResult{}
+
 	log.Printf("--- INICIANDO BACKTEST INTELIGENTE --- Total de jogos: %d", len(games))
 
 	for _, game := range games {
+		// ... (o resto da função permanece o mesmo) ...
 		passesCondition := false
 		switch input.EntryCondition {
 		case "all_games":
@@ -54,6 +57,7 @@ func RunBacktest(input BacktestInput) (*BacktestResult, error) {
 				passesCondition = true
 			}
 		}
+
 		if !passesCondition {
 			continue
 		}
@@ -70,7 +74,6 @@ func RunBacktest(input BacktestInput) (*BacktestResult, error) {
 					isWin = true
 				}
 			}
-
 		case "Under 1.5 HT":
 			if game.HomeScoreHT.Valid && game.AwayScoreHT.Valid {
 				canDetermineOutcome = true
@@ -89,21 +92,15 @@ func RunBacktest(input BacktestInput) (*BacktestResult, error) {
 					}
 				}
 			}
-
-		// --- NOVA LÓGICA ADICIONADA AQUI ---
 		case "Over 1.5 HT":
-			// Prioridade 1: Tenta usar o placar de intervalo
 			if game.HomeScoreHT.Valid && game.AwayScoreHT.Valid {
 				canDetermineOutcome = true
 				htGoals := int(game.HomeScoreHT.Int32) + int(game.AwayScoreHT.Int32)
-				if htGoals > 1 { // Aposta ganha se houver 2 ou mais gols
+				if htGoals > 1 {
 					isWin = true
 				}
 			} else if gameBets, ok := betsByGameID[game.ID]; ok {
-				// Prioridade 2: Tenta inferir pelo resultado de uma aposta "Under 1.5 HT"
 				for _, bet := range gameBets {
-					// Lógica inversa da anterior (não temos apostas under 1.5 ht para inferir)
-					// Mas podemos inferir por uma aposta Over 1.5 HT que já exista
 					if bet.Market == "Over 1.5 HT" && bet.Result != "" {
 						canDetermineOutcome = true
 						if bet.Result == "GREEN" {

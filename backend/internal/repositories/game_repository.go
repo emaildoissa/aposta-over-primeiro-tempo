@@ -7,10 +7,20 @@ import (
 	"github.com/emaildoissa/aposta-backend/internal/models"
 )
 
-func GetAllGames() ([]models.Game, error) {
+func GetAllGames(page int, limit int) ([]models.Game, int64, error) {
 	var games []models.Game
-	err := database.DB.Preload("Bets").Order("start_time asc").Find(&games).Error
-	return games, err
+	var total int64
+
+	// Calcula o offset para a consulta
+	offset := (page - 1) * limit
+
+	// Primeiro, faz uma consulta para contar o total de registros
+	database.DB.Model(&models.Game{}).Count(&total)
+
+	// Depois, faz a consulta para buscar a página específica de jogos
+	err := database.DB.Preload("Bets").Order("start_time desc").Limit(limit).Offset(offset).Find(&games).Error
+
+	return games, total, err
 }
 
 func CreateGame(game *models.Game) error {

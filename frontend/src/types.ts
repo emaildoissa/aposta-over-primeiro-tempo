@@ -25,7 +25,8 @@ export type Bet = {
   stake: number;
   result: string;
   pnl: number;
-  strategy?: string; // <-- CAMPO NOVO ADICIONADO AQUI
+  strategy?: string;
+  notes?: string;
 };
 
 export type DashboardStats = {
@@ -40,6 +41,33 @@ export type DashboardStats = {
 };
 
 export type EvolutionDataPoint = {
-  date: string; // Mudou de bet_id para date
+  date: string;
   cumulative_profit: number;
+};
+
+export type GamesResponse = {
+  games: Game[];
+  total: number;
+};
+
+export type BacktestInput = {
+  entry_condition: string;
+  market_to_bet: string;
+  hypothetical_odd: number;
+  hypothetical_stake: number;
+};
+
+export type BacktestResult = {
+  total_simulated_bets: number;
+  wins: number;
+  losses: number;
+  total_invested: number;
+  total_pnl: number;
+  roi: number;
+};
+
+// --- TIPO ADICIONADO AQUI ---
+export type ApiFilters = {
+  market?: string;
+  strategy?: string;
 };

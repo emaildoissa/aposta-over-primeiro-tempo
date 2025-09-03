@@ -1,11 +1,12 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useData } from '../../contexts/DataContext';
 import * as api from '../../services/api';
-import { type DashboardStats } from '../../types';
+import type { DashboardStats } from '../../types';
 import styles from './Dashboard.module.css';
 import EvolutionChart from '../EvolutionChart';
 import GameCard from './GameCard';
 import ScheduledGameCard from './ScheduledGameCard';
+import Pagination from '../Pagination';
 
 const StatCard = ({ title, value, subtitle, variant }: { title: string, value: string, subtitle: string, variant: string }) => (
   <div className={`${styles.statCard} ${styles[variant]}`}>
@@ -16,13 +17,23 @@ const StatCard = ({ title, value, subtitle, variant }: { title: string, value: s
 );
 
 export default function Dashboard() {
-  const { games, bets, loading: dataLoading, error: dataError, refetchData } = useData();
+  const { 
+    games, 
+    totalGames, 
+    currentPage, 
+    setPage, 
+    itemsPerPage, 
+    bets, 
+    loading: dataLoading, 
+    error: dataError, 
+    refetchData 
+  } = useData();
   
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(true);
   const [filterDate, setFilterDate] = useState('');
   const [marketFilter, setMarketFilter] = useState('');
-  
+
   const fetchStats = useCallback(async (filters: { market?: string } = {}) => {
     setStatsLoading(true);
     try {
@@ -35,33 +46,34 @@ export default function Dashboard() {
     }
   }, []);
 
-  // Função unificada para recarregar todos os dados da página
-  const fetchAllDashboardData = useCallback(async (filters: { market?: string } = {}) => {
+  const fullRefetch = useCallback(async (filters: { market?: string } = {}, page: number = 1) => {
     await Promise.all([
-        refetchData(filters),
+        refetchData(filters, page),
         fetchStats(filters)
     ]);
   }, [refetchData, fetchStats]);
 
   useEffect(() => {
-    fetchStats(); // Carga inicial apenas das estatísticas
+    fetchStats();
   }, [fetchStats]);
   
   const handleMarketFilterChange = (market: string) => {
-    const newFilters = { market: market };
     setMarketFilter(market);
-    fetchAllDashboardData(newFilters);
+    setPage(1); // Reseta para a página 1 ao aplicar um novo filtro
+    fullRefetch({ market: market }, 1);
   };
   
   const allMarkets = useMemo(() => {
+    // Para popular o filtro, idealmente teríamos um endpoint ou usaríamos todos os bets,
+    // mas para simplificar, usaremos os bets da página atual.
     const markets = new Set(bets.map(b => b.market));
     return Array.from(markets).sort();
   }, [bets]);
 
-  // Lógica para separar jogos agendados dos jogos com apostas
   const { scheduledGames, gamesWithBets } = useMemo(() => {
     const bettedGameIds = new Set(bets.map(b => b.game_id));
-    const scheduled = games.filter(g => !bettedGameIds.has(g.id)).sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
+    // Esta lógica agora se aplica à página de jogos atual
+    const scheduled = games.filter(g => !bettedGameIds.has(g.id));
     const withBets = games.filter(g => bettedGameIds.has(g.id));
     return { scheduledGames: scheduled, gamesWithBets: withBets };
   }, [games, bets]);
@@ -81,10 +93,10 @@ export default function Dashboard() {
       <h2 className={styles.title}>Dashboard - Resumo da Banca</h2>
       {statsLoading ? <p>Calculando estatísticas...</p> : stats && (
         <div className={styles.statsGrid}>
-          <StatCard title="Banca Total" value={stats.banca_total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} subtitle={`Inicial: ${stats.banca_inicial.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`} variant="banca" />
-          <StatCard title="ROI" value={`${stats.roi.toFixed(2)}%`} subtitle="Retorno Sobre Investimento" variant="roi" />
-          <StatCard title="Taxa de Acerto" value={`${stats.taxa_de_acerto.toFixed(2)}%`} subtitle={`${stats.apostas_vencidas} de ${stats.total_apostas} apostas`} variant="acerto" />
-          <StatCard title="Lucro Total" value={stats.lucro_total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} subtitle={`${stats.total_apostas} apostas no total`} variant="lucro" />
+            <StatCard title="Banca Total" value={stats.banca_total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} subtitle={`Inicial: ${stats.banca_inicial.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`} variant="banca" />
+            <StatCard title="ROI" value={`${stats.roi.toFixed(2)}%`} subtitle="Retorno Sobre Investimento" variant="roi" />
+            <StatCard title="Taxa de Acerto" value={`${stats.taxa_de_acerto.toFixed(2)}%`} subtitle={`${stats.apostas_vencidas} de ${stats.total_apostas} apostas`} variant="acerto" />
+            <StatCard title="Lucro Total" value={stats.lucro_total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} subtitle={`${stats.total_apostas} apostas no total`} variant="lucro" />
         </div>
       )}
 
@@ -92,14 +104,13 @@ export default function Dashboard() {
         <EvolutionChart />
       </div>
 
-      {/* Seção de Jogos Agendados */}
       <div className="scheduled-games-section">
         <h3 style={{ borderBottom: '2px solid #ffa000', paddingBottom: '8px' }}>
           Jogos Agendados (Aguardando Aposta)
         </h3>
         {scheduledGames.length > 0 ? (
           scheduledGames.map(game => (
-            <ScheduledGameCard key={game.id} game={game} onBetPlaced={() => fetchAllDashboardData({ market: marketFilter })} />
+            <ScheduledGameCard key={game.id} game={game} onBetPlaced={() => fullRefetch({ market: marketFilter }, currentPage)} />
           ))
         ) : (
           <p style={{ fontStyle: 'italic', color: '#666' }}>Nenhum jogo novo agendado.</p>
@@ -108,7 +119,6 @@ export default function Dashboard() {
 
       <hr style={{margin: '40px 0', border: 'none', borderTop: '1px solid #ddd' }} />
 
-      {/* Seção do Histórico de Apostas */}
       <div className="games-with-bets-section">
         <h3 style={{ borderBottom: '2px solid #eee', paddingBottom: '8px' }}>
           Histórico de Apostas
@@ -129,18 +139,25 @@ export default function Dashboard() {
         
         <div>
           {filteredGamesWithBets.length === 0 ? (
-            <p style={{ fontStyle: 'italic', color: '#666' }}>Nenhum jogo com aposta encontrada para os filtros selecionados.</p>
+            <p style={{ fontStyle: 'italic', color: '#666' }}>Nenhum jogo com aposta encontrada para os filtros selecionados nesta página.</p>
           ) : (
             filteredGamesWithBets.map(game => (
               <GameCard 
                 key={game.id}
                 game={game}
                 bets={getBetsForGame(game.id)}
-                onDataUpdate={() => fetchAllDashboardData({ market: marketFilter })}
+                onDataUpdate={() => fullRefetch({ market: marketFilter }, currentPage)}
               />
             ))
           )}
         </div>
+
+        <Pagination 
+          currentPage={currentPage}
+          totalItems={totalGames}
+          itemsPerPage={itemsPerPage}
+          onPageChange={(page) => setPage(page)}
+        />
       </div>
     </div>
   );

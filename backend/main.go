@@ -45,8 +45,8 @@ func main() {
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		AllowCredentials: true,
 	}))
+
 	routes.SetupRoutes(r)
 
-	// r.Run(":" + os.Getenv("PORT")) // Descomente para usar a porta do .env
-	r.Run(":8080") // Mantendo como estava na sua imagem
+	r.Run(":8080")
 }
