@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  # Serviço do Banco de Dados PostgreSQL
+  db:
+    image: postgres:15-alpine
+    container_name: betanalyzer_db
+    restart: always
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - betanalyzer-net
+
+  # Serviço do Backend (Go)
+  backend:
+    build:
+      context: ./backend # Constrói a imagem usando o Dockerfile na pasta 'backend'
+    container_name: betanalyzer_backend
+    restart: always
+    depends_on:
+      - db
+    env_file:
+      - ./backend/.env # Usa as variáveis de ambiente do arquivo .env
+    ports:
+      - "8080:8080"
+    networks:
+      - betanalyzer-net
+
+  # Serviço do Frontend (React/Nginx)
+  frontend:
+    build:
+      context: ./frontend # Constrói a imagem usando o Dockerfile na pasta 'frontend'
+    container_name: betanalyzer_frontend
+    restart: always
+    ports:
+      - "80:80" # Mapeia a porta 80 do container para a porta 80 da sua VPS
+    depends_on:
+      - backend
+    networks:
+      - betanalyzer-net
+
+# Define volumes e redes
+volumes:
+  postgres_data:
+
+networks:
+  betanalyzer-net:
+    driver: bridge

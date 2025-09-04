@@ -2,7 +2,7 @@ package database
 
 import (
 	"fmt"
-	"log"
+	"log" // Garanta que o "log" está importado
 	"os"
 
 	"gorm.io/driver/postgres"
@@ -20,6 +20,9 @@ func ConnectDB() {
 		os.Getenv("DB_NAME"),
 		os.Getenv("DB_PORT"),
 	)
+
+	// --- ADICIONE ESTE LOG DE DEBUG AQUI ---
+	log.Printf("DEBUG: Conectando ao banco de dados com a DSN: %s", dsn)
 
 	var err error
 	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
