@@ -3,23 +3,28 @@ FROM node:18-alpine AS builder
 
 WORKDIR /app
 
-# Copia os arquivos de dependências e as instala
-COPY package.json yarn.lock ./
-RUN yarn install
+# --- USA NPM ---
+# Copia o package.json E o package-lock.json (essencial para npm)
+COPY package.json package-lock.json ./
 
-# Copia todo o código-fonte
+# --- USA NPM ---
+# Instala as dependências com npm
+# A flag --legacy-peer-deps é uma boa prática para evitar erros com versões de dependências
+RUN npm install --legacy-peer-deps
+
+# Copia o resto do código-fonte
 COPY . .
 
-# Constrói a aplicação para produção
-RUN yarn build
+# --- USA NPM ---
+# Constrói a aplicação com o script de build do npm
+RUN npm run build
 
 # Estágio 2: Produção - Usa uma imagem Nginx para servir os arquivos estáticos
 FROM nginx:stable-alpine
 
-# Copia os arquivos construídos do estágio anterior para a pasta do Nginx
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Expõe a porta 80, que é a porta padrão do Nginx
-EXPOSE 80
+# Copia a configuração customizada do Nginx para lidar com as rotas do React
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# O Nginx já inicia automaticamente, não precisamos de um CMD
+EXPOSE 80

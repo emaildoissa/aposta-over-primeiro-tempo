@@ -1,11 +1,8 @@
-version: '3.8'
+version: "3.8"
 
 services:
-  # Serviço do Banco de Dados PostgreSQL
   db:
     image: postgres:15-alpine
-    container_name: betanalyzer_db
-    restart: always
     environment:
       - POSTGRES_USER=${DB_USER}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
@@ -13,40 +10,51 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - betanalyzer-net
+      - rede_interna
+    deploy:
+      restart_policy:
+        condition: on-failure
 
-  # Serviço do Backend (Go)
   backend:
-    build:
-      context: ./backend # Constrói a imagem usando o Dockerfile na pasta 'backend'
-    container_name: betanalyzer_backend
-    restart: always
+    image: emaildoissa/betanalyzer-backend:latest
     depends_on:
       - db
-    env_file:
-      - ./backend/.env # Usa as variáveis de ambiente do arquivo .env
-    ports:
-      - "8080:8080"
+    environment:
+      DB_HOST: db
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      DB_PORT: ${DB_PORT}
+      JWT_SECRET: ${JWT_SECRET}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
     networks:
-      - betanalyzer-net
+      - rede_interna
+    deploy:
+      restart_policy:
+        condition: on-failure
 
-  # Serviço do Frontend (React/Nginx)
   frontend:
-    build:
-      context: ./frontend # Constrói a imagem usando o Dockerfile na pasta 'frontend'
-    container_name: betanalyzer_frontend
-    restart: always
-    ports:
-      - "80:80" # Mapeia a porta 80 do container para a porta 80 da sua VPS
+    image: emaildoissa/betanalyzer-frontend:latest
     depends_on:
       - backend
     networks:
-      - betanalyzer-net
+      - rede_interna
+    deploy:
+      restart_policy:
+        condition: on-failure
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.betanalyzer.rule=Host(`betanalyzer.automacao.free.nf`)
+        - traefik.http.routers.betanalyzer.entrypoints=websecure
+        - traefik.http.routers.betanalyzer.tls.certresolver=letsencryptresolver
+        - traefik.http.services.betanalyzer.loadbalancer.server.port=80
 
-# Define volumes e redes
 volumes:
   postgres_data:
+    external: true
 
 networks:
-  betanalyzer-net:
-    driver: bridge
+  rede_interna: ## Nome da rede interna
+    external: true
+    name: rede_interna ## Nome da rede interna
+
