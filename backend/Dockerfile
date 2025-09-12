@@ -20,14 +20,28 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
 # Estágio 2: Produção - Começa com uma imagem "vazia" (alpine), que é extremamente leve
 FROM alpine:latest  
 
+# Instala o 'netcat', uma ferramenta necessária para o nosso script de verificação da base de dados.
+# '--no-cache' garante que não guardamos o índice de pacotes, mantendo a imagem pequena.
+RUN apk add --no-cache netcat-openbsd
+
 # Define o diretório de trabalho
 WORKDIR /root/
 
 # Copia apenas o ficheiro executável compilado do estágio de build anterior
 COPY --from=builder /app/main .
 
+# Copia o nosso novo script de entrada para dentro do contêiner
+COPY entrypoint.sh .
+
+# Dá permissão de execução ao script
+RUN chmod +x entrypoint.sh
+
 # Expõe a porta que a nossa aplicação Go usa
 EXPOSE 8080
 
-# Comando para executar a aplicação quando o contêiner iniciar
+# Define o script de entrada como o ponto de partida do contêiner
+ENTRYPOINT ["./entrypoint.sh"]
+
+# Comando para executar a aplicação quando o contêiner iniciar.
+# Este comando será passado como argumento para o ENTRYPOINT.
 CMD ["./main"]
